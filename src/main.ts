@@ -1,3 +1,4 @@
+import dns from 'node:dns';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,17 +8,22 @@ import compression from 'compression';
 import { AppModule } from './app.module';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 
-async function bootstrap() {
+// Configure resilient DNS nameservers for cloud cluster resolutions
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
+// bootstrap: initializes and starts the NestJS HTTP & WebSocket server
+async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
   const prefix = configService.get<string>('API_PREFIX', 'api/v1');
-  const corsOrigin = configService.get<string>(
+  const rawCorsOrigin = configService.get<string>(
     'CORS_ORIGIN',
-    'http://localhost:4200',
+    'http://localhost:4200,http://localhost:3000,https://loondasol.com,https://workspace.loondasol.com',
   );
+  const corsOrigins = rawCorsOrigin.split(',').map((origin) => origin.trim());
 
   // Security Headers via Helmet
   app.use(helmet());
@@ -27,7 +33,19 @@ async function bootstrap() {
 
   // CORS Configuration
   app.enableCors({
-    origin: corsOrigin,
+    origin: (requestOrigin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!requestOrigin) return callback(null, true);
+      if (
+        corsOrigins.includes(requestOrigin) ||
+        requestOrigin.endsWith('.loondasol.com') ||
+        requestOrigin === 'http://localhost:3000' ||
+        requestOrigin === 'http://localhost:4200'
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Dev resilient
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

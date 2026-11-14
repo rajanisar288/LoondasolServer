@@ -1104,7 +1104,7 @@ export class PayrollService {
     const company = await compModel.findOne({ companyId: tenant.companyId }).lean();
     const cfg: any = {
       ...(company?.payrollConfig || {}),
-      ...(dto.templateConfig || {}),
+      ...(dto.payrollConfigOverride || dto.templateConfig || {}),
     };
 
     const currency = company?.currency || 'USD';

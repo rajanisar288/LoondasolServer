@@ -15,4 +15,19 @@ export declare class CompaniesService {
         message: string;
         success: boolean;
     }>;
+    getSeatStatus(tenant: TenantContext): Promise<{
+        purchasedSeats: number;
+        totalActiveSeats: number;
+        availableSeats: number;
+        plan: string;
+        pricePerSeat: number;
+        aiLimit: number;
+        aiUsed: number;
+    }>;
+    addSeats(tenant: TenantContext, additionalSeats: number): Promise<{
+        success: boolean;
+        additionalSeats: number;
+        totalSeats: number;
+        chargedAmount: number;
+    }>;
 }

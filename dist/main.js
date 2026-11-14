@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const node_dns_1 = __importDefault(require("node:dns"));
 const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
@@ -11,17 +12,29 @@ const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const app_module_1 = require("./app.module");
 const redis_io_adapter_1 = require("./common/adapters/redis-io.adapter");
+node_dns_1.default.setServers(['8.8.8.8', '1.1.1.1']);
 async function bootstrap() {
     const logger = new common_1.Logger('Bootstrap');
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);
     const port = configService.get('PORT', 4000);
     const prefix = configService.get('API_PREFIX', 'api/v1');
-    const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:4200');
+    const rawCorsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:4200,http://localhost:3000,https://loondasol.com,https://workspace.loondasol.com');
+    const corsOrigins = rawCorsOrigin.split(',').map((origin) => origin.trim());
     app.use((0, helmet_1.default)());
     app.use((0, compression_1.default)());
     app.enableCors({
-        origin: corsOrigin,
+        origin: (requestOrigin, callback) => {
+            if (!requestOrigin)
+                return callback(null, true);
+            if (corsOrigins.includes(requestOrigin) ||
+                requestOrigin.endsWith('.loondasol.com') ||
+                requestOrigin === 'http://localhost:3000' ||
+                requestOrigin === 'http://localhost:4200') {
+                return callback(null, true);
+            }
+            return callback(null, true);
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: [

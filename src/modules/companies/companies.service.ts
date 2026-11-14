@@ -2,11 +2,17 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { RegionalDatabaseManager } from '../../database/regional-database.manager';
-import { Company, CompanySchema } from './schemas/company.schema';
+import {
+  Company,
+  CompanySchema,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from './schemas/company.schema';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { TenantContext } from '../../common/decorators/current-tenant.decorator';
 import { JwtPayload } from '../auth/jwt.strategy';
@@ -181,6 +187,104 @@ export class CompaniesService {
     return {
       message: 'Company workspace and all associated data permanently deleted.',
       success: true,
+    };
+  }
+
+  // getSeatStatus: computes total active seats used by owner and employees against purchased quota
+  async getSeatStatus(tenant: TenantContext): Promise<{
+    purchasedSeats: number;
+    totalActiveSeats: number;
+    availableSeats: number;
+    plan: string;
+    pricePerSeat: number;
+    aiLimit: number;
+    aiUsed: number;
+  }> {
+    const companyModel = await this.regionalDbManager.getModel<Company>(
+      tenant.region,
+      Company.name,
+      CompanySchema,
+    );
+    const company = await companyModel.findOne({ companyId: tenant.companyId }).lean();
+    if (!company) {
+      throw new NotFoundException('Company profile not found');
+    }
+
+    const employeeModel = await this.regionalDbManager.getModel<Employee>(
+      tenant.region,
+      Employee.name,
+      EmployeeSchema,
+    );
+
+    const activeEmployees = await employeeModel.countDocuments({
+      companyId: tenant.companyId,
+      status: { $nin: ['TERMINATED', 'DEACTIVATED', 'INACTIVE'] },
+    });
+
+    const totalActiveSeats = activeEmployees + 1;
+    const purchasedSeats = company.subscription?.purchasedSeats ?? 5;
+    const plan = company.subscription?.plan || 'PRO';
+    const pricePerSeat = company.subscription?.pricePerSeat ?? 5;
+    const aiLimit = company.subscription?.aiRequestLimit ?? 5000;
+    const aiUsed = company.subscription?.aiRequestsUsedThisMonth ?? 0;
+    const availableSeats = Math.max(0, purchasedSeats - totalActiveSeats);
+
+    return {
+      purchasedSeats,
+      totalActiveSeats,
+      availableSeats,
+      plan,
+      pricePerSeat,
+      aiLimit,
+      aiUsed,
+    };
+  }
+
+  // addSeats: expands company purchased seats and calculates incremental seat charge
+  async addSeats(
+    tenant: TenantContext,
+    additionalSeats: number,
+  ): Promise<{ success: boolean; additionalSeats: number; totalSeats: number; chargedAmount: number }> {
+    if (!additionalSeats || additionalSeats < 1) {
+      throw new BadRequestException('Additional seats count must be at least 1');
+    }
+
+    const companyModel = await this.regionalDbManager.getModel<Company>(
+      tenant.region,
+      Company.name,
+      CompanySchema,
+    );
+
+    const company = await companyModel.findOne({ companyId: tenant.companyId });
+    if (!company) {
+      throw new NotFoundException('Company profile not found');
+    }
+
+    const pricePerSeat = company.subscription?.pricePerSeat ?? 5;
+    const chargedAmount = additionalSeats * pricePerSeat;
+    const currentSeats = company.subscription?.purchasedSeats ?? 5;
+    const newTotalSeats = currentSeats + additionalSeats;
+
+    if (!company.subscription) {
+      company.subscription = {
+        plan: SubscriptionPlan.PRO,
+        status: SubscriptionStatus.ACTIVE,
+        purchasedSeats: newTotalSeats,
+        pricePerSeat,
+        aiRequestLimit: 5000,
+        aiRequestsUsedThisMonth: 0,
+      } as any;
+    } else {
+      company.subscription.purchasedSeats = newTotalSeats;
+    }
+
+    await company.save();
+
+    return {
+      success: true,
+      additionalSeats,
+      totalSeats: newTotalSeats,
+      chargedAmount,
     };
   }
 }

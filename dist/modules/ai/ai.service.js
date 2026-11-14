@@ -21,6 +21,7 @@ const attendance_schema_1 = require("../attendance/schemas/attendance.schema");
 const department_schema_1 = require("../departments/schemas/department.schema");
 const meeting_schema_1 = require("../meetings/schemas/meeting.schema");
 const message_schema_1 = require("../chat/schemas/message.schema");
+const company_schema_1 = require("../companies/schemas/company.schema");
 const permissions_constant_1 = require("../../common/constants/permissions.constant");
 let AiService = AiService_1 = class AiService {
     constructor(configService, regionalDbManager) {
@@ -265,6 +266,41 @@ User Request: "${promptText}"`;
         if (!isOwner && !hasAiPerm) {
             throw new common_1.ForbiddenException('You do not have permission to utilize AI Assistant tools. Please contact your company administrator.');
         }
+        const companyModel = await this.regionalDbManager.getModel(tenant.region, company_schema_1.Company.name, company_schema_1.CompanySchema);
+        const company = await companyModel.findOne({ companyId: tenant.companyId });
+        if (!company) {
+            return;
+        }
+        const now = new Date();
+        const resetDate = company.subscription?.aiCycleResetDate
+            ? new Date(company.subscription.aiCycleResetDate)
+            : new Date(0);
+        const isNewCycle = now.getMonth() !== resetDate.getMonth() ||
+            now.getFullYear() !== resetDate.getFullYear();
+        if (isNewCycle) {
+            if (!company.subscription) {
+                company.subscription = {};
+            }
+            company.subscription.aiRequestsUsedThisMonth = 0;
+            company.subscription.aiCycleResetDate = now;
+            await company.save();
+        }
+        const plan = company.subscription?.plan || company_schema_1.SubscriptionPlan.PRO;
+        let limit = 5000;
+        if (plan === company_schema_1.SubscriptionPlan.STARTER) {
+            limit = 1000;
+        }
+        else if (plan === company_schema_1.SubscriptionPlan.ENTERPRISE) {
+            limit = -1;
+        }
+        else if (company.subscription?.aiRequestLimit !== undefined) {
+            limit = company.subscription.aiRequestLimit;
+        }
+        const used = company.subscription?.aiRequestsUsedThisMonth || 0;
+        if (limit !== -1 && used >= limit) {
+            throw new common_1.ForbiddenException(`AI monthly limit of ${limit} requests reached for your ${plan} plan. Please wait for the new cycle or upgrade your plan in Settings.`);
+        }
+        await companyModel.updateOne({ companyId: tenant.companyId }, { $inc: { 'subscription.aiRequestsUsedThisMonth': 1 } });
     }
     async parseTaskPrompt(promptText) {
         const prompt = `You are an AI assistant for a project management system.

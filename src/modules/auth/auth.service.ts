@@ -265,9 +265,26 @@ export class AuthService {
       EmployeeSchema,
     );
 
-    // 3. Create Company with 1-Month Free Trial Plan
+    // 3. Create Company with selected Plan and Seats quota
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+
+    const selectedPlan =
+      (dto.subscriptionPlan as SubscriptionPlan) || SubscriptionPlan.PRO;
+    const purchasedSeats = Math.max(1, Number(dto.purchasedSeats) || 5);
+    let pricePerSeat = 5;
+    let aiRequestLimit = 5000;
+
+    if (selectedPlan === SubscriptionPlan.STARTER) {
+      pricePerSeat = 3;
+      aiRequestLimit = 1000;
+    } else if (selectedPlan === SubscriptionPlan.ENTERPRISE) {
+      pricePerSeat = 8;
+      aiRequestLimit = -1;
+    } else {
+      pricePerSeat = 5;
+      aiRequestLimit = 5000;
+    }
 
     const company = await companyModel.create({
       companyId,
@@ -296,9 +313,21 @@ export class AuthService {
         loginRestriction: false,
       },
       subscription: {
-        plan: SubscriptionPlan.FREE_TRIAL,
-        status: SubscriptionStatus.TRIALING,
-        trialEndsAt,
+        plan: selectedPlan,
+        status: SubscriptionStatus.ACTIVE,
+        purchasedSeats,
+        pricePerSeat,
+        aiRequestLimit,
+        aiRequestsUsedThisMonth: 0,
+        aiCycleResetDate: new Date(),
+        currentPeriodEnd: trialEndsAt,
+      },
+      onboardingConfig: {
+        requireCnic: false,
+        requireAddress: false,
+        requireBankDetails: false,
+        allowBranchDepartments: false,
+        allowBranchCustomForms: false,
       },
     });
 
@@ -1486,11 +1515,20 @@ export class AuthService {
     const user = await userModel.findOne({ userId: identity.userId }).lean();
     const name = user ? user.displayName : 'Team Member';
 
-    await this.mailService.sendPasswordResetOtpEmail(normalizedEmail, {
-      name,
-      code: otp,
-      expiresInMinutes: 15,
-    });
+    this.logger.log(`[AUTH] Generated password reset OTP for ${normalizedEmail}: [${otp}]`);
+
+    // Asynchronously dispatch email without blocking client response
+    this.mailService
+      .sendPasswordResetOtpEmail(normalizedEmail, {
+        name,
+        code: otp,
+        expiresInMinutes: 15,
+      })
+      .catch((err: unknown) => {
+        this.logger.error(
+          `Failed to dispatch password reset email to ${normalizedEmail}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      });
 
     return {
       success: true,

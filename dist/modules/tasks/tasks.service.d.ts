@@ -15,7 +15,7 @@ export declare class TasksService {
     }): Promise<Task[]>;
     findOne(tenant: TenantContext, taskId: string): Promise<Task>;
     create(tenant: TenantContext, user: JwtPayload, dto: CreateTaskDto): Promise<Task>;
-    update(tenant: TenantContext, taskId: string, dto: UpdateTaskDto): Promise<Task>;
+    update(tenant: TenantContext, taskId: string, dto: UpdateTaskDto, user?: JwtPayload): Promise<Task>;
     startTimer(tenant: TenantContext, user: JwtPayload, taskId: string): Promise<Task>;
     stopTimer(tenant: TenantContext, user: JwtPayload, taskId: string): Promise<Task>;
     delete(tenant: TenantContext, taskId: string): Promise<{

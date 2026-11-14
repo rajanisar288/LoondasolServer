@@ -29,6 +29,7 @@ const upload_module_1 = require("./modules/upload/upload.module");
 const ai_module_1 = require("./modules/ai/ai.module");
 const broadcasts_module_1 = require("./modules/broadcasts/broadcasts.module");
 const subscriptions_module_1 = require("./modules/subscriptions/subscriptions.module");
+const kafka_module_1 = require("./modules/kafka/kafka.module");
 const notifications_module_1 = require("./modules/notifications/notifications.module");
 const meetings_module_1 = require("./modules/meetings/meetings.module");
 const branches_module_1 = require("./modules/branches/branches.module");
@@ -81,6 +82,7 @@ exports.AppModule = AppModule = __decorate([
             ai_module_1.AiModule,
             broadcasts_module_1.BroadcastsModule,
             subscriptions_module_1.SubscriptionsModule,
+            kafka_module_1.KafkaModule,
             notifications_module_1.NotificationsModule,
             meetings_module_1.MeetingsModule,
             branches_module_1.BranchesModule,

@@ -100,6 +100,13 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
+  subscriptionPlan?: string;
+
+  @IsOptional()
+  purchasedSeats?: number;
+
+  @IsOptional()
+  @IsString()
   timezone?: string;
 
   @IsOptional()

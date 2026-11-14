@@ -9,7 +9,9 @@ export type CompanyDocument = Company & Document;
 
 export enum SubscriptionPlan {
   FREE_TRIAL = 'FREE_TRIAL',
+  STARTER = 'STARTER',
   PRO = 'PRO',
+  ENTERPRISE = 'ENTERPRISE',
   ULTRA = 'ULTRA',
 }
 
@@ -47,16 +49,31 @@ export class SubscriptionConfig {
   @Prop({
     required: true,
     enum: Object.values(SubscriptionPlan),
-    default: SubscriptionPlan.FREE_TRIAL,
+    default: SubscriptionPlan.PRO,
   })
   plan: SubscriptionPlan;
 
   @Prop({
     required: true,
     enum: Object.values(SubscriptionStatus),
-    default: SubscriptionStatus.TRIALING,
+    default: SubscriptionStatus.ACTIVE,
   })
   status: SubscriptionStatus;
+
+  @Prop({ required: true, default: 5 })
+  purchasedSeats: number;
+
+  @Prop({ required: true, default: 5 })
+  pricePerSeat: number;
+
+  @Prop({ required: false, default: 5000 })
+  aiRequestLimit: number;
+
+  @Prop({ required: false, default: 0 })
+  aiRequestsUsedThisMonth: number;
+
+  @Prop({ required: false, default: () => new Date() })
+  aiCycleResetDate?: Date;
 
   @Prop({ required: false })
   trialEndsAt?: Date;
@@ -82,10 +99,10 @@ export class OnboardingConfig {
   @Prop({ required: true, default: false })
   requireBankDetails: boolean;
 
-  @Prop({ required: true, default: true })
+  @Prop({ required: true, default: false })
   allowBranchCustomForms: boolean;
 
-  @Prop({ required: true, default: true })
+  @Prop({ required: true, default: false })
   allowBranchDepartments: boolean;
 }
 

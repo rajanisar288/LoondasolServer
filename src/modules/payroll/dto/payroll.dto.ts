@@ -134,4 +134,9 @@ export class PreviewPayrollHtmlDto {
   @IsOptional()
   @IsObject()
   templateConfig?: Record<string, any>;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  payrollConfigOverride?: Record<string, any>;
 }

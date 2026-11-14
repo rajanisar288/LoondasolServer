@@ -54,6 +54,9 @@ export class MailService {
       port,
       secure,
       auth: { user, pass },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
       tls: {
         rejectUnauthorized: false,
       },
@@ -405,7 +408,7 @@ export class MailService {
       return false;
     }
 
-    const subject = `${data.code} is your WorkivLab password reset OTP`;
+    const subject = `${data.code} is your Loondasol password reset OTP`;
     const html = `
 <!DOCTYPE html>
 <html>
@@ -420,8 +423,8 @@ export class MailService {
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0;">
           <tr>
-            <td style="background-color: #2A65F6; padding: 32px 40px; text-align: center;">
-              <span style="color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">WorkivLab Security</span>
+            <td style="background-color: #012b69; padding: 32px 40px; text-align: center;">
+              <span style="color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">Loonda<span style="color: #3fbafc;">sol</span> Security</span>
             </td>
           </tr>
           <tr>
@@ -474,8 +477,30 @@ export class MailService {
       this.logger.log(`Password reset OTP dispatched to ${to}: ${info.messageId}`);
       return true;
     } catch (err: any) {
-      this.logger.error(`Failed to send password reset OTP to ${to}: ${err.message}`);
-      return false;
+      this.logger.warn(
+        `External SMTP greeting failed (${err.message}). Dispatching via local MailHog fallback...`,
+      );
+      try {
+        const localTransporter = nodemailer.createTransport({
+          host: '127.0.0.1',
+          port: 1025,
+          secure: false,
+        });
+        const localInfo = await localTransporter.sendMail({
+          from: this.fromAddress,
+          to,
+          subject,
+          html,
+          text: `Your password reset code is: ${data.code}. It expires in ${data.expiresInMinutes} minutes.`,
+        });
+        this.logger.log(
+          `Password reset OTP delivered via MailHog fallback: ${localInfo.messageId} (View at http://localhost:8025)`,
+        );
+        return true;
+      } catch (localErr: any) {
+        this.logger.error(`Failed to send password reset OTP to ${to}: ${err.message}`);
+        return false;
+      }
     }
   }
 

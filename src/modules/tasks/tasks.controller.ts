@@ -80,10 +80,11 @@ export class TasksController {
   @ApiOperation({ summary: 'Update a task' })
   async update(
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
   ): Promise<Task> {
-    return this.tasksService.update(tenant, id, dto);
+    return this.tasksService.update(tenant, id, dto, user);
   }
 
   @Post(':id/subtasks')

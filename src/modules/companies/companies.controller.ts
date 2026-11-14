@@ -37,6 +37,26 @@ export class CompaniesController {
     return this.companiesService.getCompany(tenant);
   }
 
+  @Get('seats/status')
+  @ApiOperation({
+    summary: 'Get active seat quota, occupied seats, and AI request statistics',
+  })
+  async getSeatsStatus(@CurrentTenant() tenant: TenantContext): Promise<unknown> {
+    return this.companiesService.getSeatStatus(tenant);
+  }
+
+  @Patch('seats/expand')
+  @RequirePermissions(PERMISSIONS.COMPANY_SETTINGS_UPDATE)
+  @ApiOperation({
+    summary: 'Expand company employee seats quota and charge incremental seats',
+  })
+  async expandSeats(
+    @CurrentTenant() tenant: TenantContext,
+    @Body('additionalSeats') additionalSeats: number,
+  ): Promise<unknown> {
+    return this.companiesService.addSeats(tenant, Number(additionalSeats));
+  }
+
   @Patch('current')
   @RequirePermissions(PERMISSIONS.COMPANY_SETTINGS_UPDATE)
   @ApiOperation({

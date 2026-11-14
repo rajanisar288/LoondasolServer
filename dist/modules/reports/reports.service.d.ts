@@ -89,6 +89,16 @@ export interface DashboardMetrics {
     myCompletedTasksCount?: number;
     myPendingLeavesCount?: number;
     myHoursLoggedThisMonth?: number;
+    aiUsage?: {
+        used: number;
+        limit: number;
+        plan: string;
+    };
+    seatUsage?: {
+        purchasedSeats: number;
+        totalActiveSeats: number;
+        availableSeats: number;
+    };
 }
 export interface FilteredAnalytics {
     period: string;

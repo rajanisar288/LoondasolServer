@@ -42,4 +42,5 @@ export declare class BulkEmailPayrollDto {
 }
 export declare class PreviewPayrollHtmlDto {
     templateConfig?: Record<string, any>;
+    payrollConfigOverride?: Record<string, any>;
 }

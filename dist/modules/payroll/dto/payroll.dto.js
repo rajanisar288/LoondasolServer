@@ -148,4 +148,10 @@ __decorate([
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], PreviewPayrollHtmlDto.prototype, "templateConfig", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], PreviewPayrollHtmlDto.prototype, "payrollConfigOverride", void 0);
 //# sourceMappingURL=payroll.dto.js.map

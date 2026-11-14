@@ -137,6 +137,22 @@ let AuthService = AuthService_1 = class AuthService {
             const employeeModel = await this.regionalDbManager.getModel(region, employee_schema_1.Employee.name, employee_schema_1.EmployeeSchema);
             const trialEndsAt = new Date();
             trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+            const selectedPlan = dto.subscriptionPlan || company_schema_1.SubscriptionPlan.PRO;
+            const purchasedSeats = Math.max(1, Number(dto.purchasedSeats) || 5);
+            let pricePerSeat = 5;
+            let aiRequestLimit = 5000;
+            if (selectedPlan === company_schema_1.SubscriptionPlan.STARTER) {
+                pricePerSeat = 3;
+                aiRequestLimit = 1000;
+            }
+            else if (selectedPlan === company_schema_1.SubscriptionPlan.ENTERPRISE) {
+                pricePerSeat = 8;
+                aiRequestLimit = -1;
+            }
+            else {
+                pricePerSeat = 5;
+                aiRequestLimit = 5000;
+            }
             const company = await companyModel.create({
                 companyId,
                 name: dto.companyName || 'My Company',
@@ -164,9 +180,21 @@ let AuthService = AuthService_1 = class AuthService {
                     loginRestriction: false,
                 },
                 subscription: {
-                    plan: company_schema_1.SubscriptionPlan.FREE_TRIAL,
-                    status: company_schema_1.SubscriptionStatus.TRIALING,
-                    trialEndsAt,
+                    plan: selectedPlan,
+                    status: company_schema_1.SubscriptionStatus.ACTIVE,
+                    purchasedSeats,
+                    pricePerSeat,
+                    aiRequestLimit,
+                    aiRequestsUsedThisMonth: 0,
+                    aiCycleResetDate: new Date(),
+                    currentPeriodEnd: trialEndsAt,
+                },
+                onboardingConfig: {
+                    requireCnic: false,
+                    requireAddress: false,
+                    requireBankDetails: false,
+                    allowBranchDepartments: false,
+                    allowBranchCustomForms: false,
                 },
             });
             await roleModel.create({
@@ -989,10 +1017,15 @@ let AuthService = AuthService_1 = class AuthService {
         const userModel = await this.regionalDbManager.getModel(identity.region, user_schema_1.User.name, user_schema_1.UserSchema);
         const user = await userModel.findOne({ userId: identity.userId }).lean();
         const name = user ? user.displayName : 'Team Member';
-        await this.mailService.sendPasswordResetOtpEmail(normalizedEmail, {
+        this.logger.log(`[AUTH] Generated password reset OTP for ${normalizedEmail}: [${otp}]`);
+        this.mailService
+            .sendPasswordResetOtpEmail(normalizedEmail, {
             name,
             code: otp,
             expiresInMinutes: 15,
+        })
+            .catch((err) => {
+            this.logger.error(`Failed to dispatch password reset email to ${normalizedEmail}: ${err instanceof Error ? err.message : String(err)}`);
         });
         return {
             success: true,

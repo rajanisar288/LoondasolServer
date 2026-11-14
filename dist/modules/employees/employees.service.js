@@ -116,15 +116,14 @@ let EmployeesService = class EmployeesService {
         const company = await companyModel
             .findOne({ companyId: tenant.companyId })
             .lean();
-        const isFreeTrial = !company?.subscription?.plan ||
-            company.subscription.plan === 'FREE_TRIAL';
-        if (isFreeTrial) {
-            const currentEmployeeCount = await model.countDocuments({
-                companyId: tenant.companyId,
-            });
-            if (currentEmployeeCount >= 10) {
-                throw new common_1.BadRequestException('Free trial is limited to a maximum of 10 employees. Please upgrade to Pro or Ultra to add more team members.');
-            }
+        const activeEmployees = await model.countDocuments({
+            companyId: tenant.companyId,
+            status: { $nin: ['TERMINATED', 'DEACTIVATED', 'INACTIVE'] },
+        });
+        const totalActiveSeats = activeEmployees + 1;
+        const purchasedSeats = company?.subscription?.purchasedSeats ?? 5;
+        if (totalActiveSeats >= purchasedSeats) {
+            throw new common_1.BadRequestException(`You have reached your ${purchasedSeats} employee seats limit. To add more employees, please purchase additional seats in Settings.`);
         }
         const existing = await model
             .findOne({

@@ -110,7 +110,7 @@ let TasksService = TasksService_1 = class TasksService {
             primaryAssigneeName = assignees[0].name;
         }
         const taskId = `task_${(0, crypto_1.randomUUID)()}`;
-        return model.create({
+        const created = await model.create({
             taskId,
             companyId: tenant.companyId,
             title: dto.title.trim(),
@@ -126,9 +126,15 @@ let TasksService = TasksService_1 = class TasksService {
             totalSpentMinutes: 0,
             isTimerRunning: false,
         });
+        await this.notifyTaskMembers(tenant, created, user.userId, `📋 New Task: ${created.title}`, `You were assigned to "${created.title}"`, { status: created.status, priority: created.priority });
+        return created;
     }
-    async update(tenant, taskId, dto) {
+    async update(tenant, taskId, dto, user) {
         const model = await this.regionalDbManager.getModel(tenant.region, task_schema_1.Task.name, task_schema_1.TaskSchema);
+        const existing = await model.findOne({ companyId: tenant.companyId, taskId }).lean();
+        if (!existing) {
+            throw new common_1.NotFoundException('Task not found');
+        }
         const payload = {};
         if (dto.title !== undefined)
             payload['title'] = dto.title.trim();
@@ -185,6 +191,14 @@ let TasksService = TasksService_1 = class TasksService {
         if (!updated) {
             throw new common_1.NotFoundException('Task not found');
         }
+        const actorId = user?.userId || '';
+        let notifTitle = `✏️ Task Updated: ${updated.title}`;
+        let notifMsg = `Task "${updated.title}" was updated`;
+        if (dto.status && existing.status !== dto.status) {
+            notifTitle = `🔄 Task Status: ${updated.status}`;
+            notifMsg = `Task "${updated.title}" moved to ${updated.status.replace(/_/g, ' ')}`;
+        }
+        await this.notifyTaskMembers(tenant, updated, actorId, notifTitle, notifMsg, { status: updated.status, priority: updated.priority });
         return updated;
     }
     async startTimer(tenant, user, taskId) {

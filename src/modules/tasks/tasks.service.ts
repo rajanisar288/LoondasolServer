@@ -162,7 +162,7 @@ export class TasksService {
 
     const taskId = `task_${randomUUID()}`;
 
-    return model.create({
+    const created = await model.create({
       taskId,
       companyId: tenant.companyId,
       title: dto.title.trim(),
@@ -178,18 +178,36 @@ export class TasksService {
       totalSpentMinutes: 0,
       isTimerRunning: false,
     });
+
+    // Notify assigned members
+    await this.notifyTaskMembers(
+      tenant,
+      created,
+      user.userId,
+      `📋 New Task: ${created.title}`,
+      `You were assigned to "${created.title}"`,
+      { status: created.status, priority: created.priority },
+    );
+
+    return created;
   }
 
   async update(
     tenant: TenantContext,
     taskId: string,
     dto: UpdateTaskDto,
+    user?: JwtPayload,
   ): Promise<Task> {
     const model = await this.regionalDbManager.getModel<Task>(
       tenant.region,
       Task.name,
       TaskSchema,
     );
+
+    const existing = await model.findOne({ companyId: tenant.companyId, taskId }).lean();
+    if (!existing) {
+      throw new NotFoundException('Task not found');
+    }
 
     const payload: Record<string, unknown> = {};
     if (dto.title !== undefined) payload['title'] = dto.title.trim();
@@ -257,6 +275,22 @@ export class TasksService {
     if (!updated) {
       throw new NotFoundException('Task not found');
     }
+
+    const actorId = user?.userId || '';
+    let notifTitle = `✏️ Task Updated: ${updated.title}`;
+    let notifMsg = `Task "${updated.title}" was updated`;
+    if (dto.status && existing.status !== dto.status) {
+      notifTitle = `🔄 Task Status: ${updated.status}`;
+      notifMsg = `Task "${updated.title}" moved to ${updated.status.replace(/_/g, ' ')}`;
+    }
+    await this.notifyTaskMembers(
+      tenant,
+      updated,
+      actorId,
+      notifTitle,
+      notifMsg,
+      { status: updated.status, priority: updated.priority },
+    );
 
     return updated;
   }

@@ -124,6 +124,15 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
+], RegisterDto.prototype, "subscriptionPlan", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], RegisterDto.prototype, "purchasedSeats", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
 ], RegisterDto.prototype, "timezone", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

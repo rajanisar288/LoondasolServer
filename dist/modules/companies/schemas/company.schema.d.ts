@@ -3,7 +3,9 @@ import { RegionCode } from '../../../common/constants/regions.constant';
 export type CompanyDocument = Company & Document;
 export declare enum SubscriptionPlan {
     FREE_TRIAL = "FREE_TRIAL",
+    STARTER = "STARTER",
     PRO = "PRO",
+    ENTERPRISE = "ENTERPRISE",
     ULTRA = "ULTRA"
 }
 export declare enum SubscriptionStatus {
@@ -24,6 +26,11 @@ export declare class WorkingHoursConfig {
 export declare class SubscriptionConfig {
     plan: SubscriptionPlan;
     status: SubscriptionStatus;
+    purchasedSeats: number;
+    pricePerSeat: number;
+    aiRequestLimit: number;
+    aiRequestsUsedThisMonth: number;
+    aiCycleResetDate?: Date;
     trialEndsAt?: Date;
     currentPeriodEnd?: Date;
     stripeCustomerId?: string;

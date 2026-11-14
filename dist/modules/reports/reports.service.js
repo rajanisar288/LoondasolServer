@@ -171,9 +171,19 @@ let ReportsService = class ReportsService {
                 myPendingLeavesCount: myPendingLeaves,
                 myHoursLoggedThisMonth: myHoursLogged,
                 subscription: {
-                    plan: company?.subscription?.plan || 'FREE_TRIAL',
-                    status: company?.subscription?.status || 'TRIALING',
+                    plan: company?.subscription?.plan || 'PRO',
+                    status: company?.subscription?.status || 'ACTIVE',
                     trialEndsAt: company?.subscription?.trialEndsAt,
+                },
+                aiUsage: {
+                    used: company?.subscription?.aiRequestsUsedThisMonth ?? 0,
+                    limit: company?.subscription?.aiRequestLimit ?? 5000,
+                    plan: company?.subscription?.plan || 'PRO',
+                },
+                seatUsage: {
+                    purchasedSeats: company?.subscription?.purchasedSeats ?? 5,
+                    totalActiveSeats: 1,
+                    availableSeats: Math.max(0, (company?.subscription?.purchasedSeats ?? 5) - 1),
                 },
                 upcomingMeetings,
                 upcomingBirthdays: topBirthdays,
@@ -282,9 +292,19 @@ let ReportsService = class ReportsService {
             todayAbsentCount,
             todayLateCount,
             subscription: {
-                plan: company?.subscription?.plan || 'FREE_TRIAL',
-                status: company?.subscription?.status || 'TRIALING',
+                plan: company?.subscription?.plan || 'PRO',
+                status: company?.subscription?.status || 'ACTIVE',
                 trialEndsAt: company?.subscription?.trialEndsAt,
+            },
+            aiUsage: {
+                used: company?.subscription?.aiRequestsUsedThisMonth ?? 0,
+                limit: company?.subscription?.aiRequestLimit ?? 5000,
+                plan: company?.subscription?.plan || 'PRO',
+            },
+            seatUsage: {
+                purchasedSeats: company?.subscription?.purchasedSeats ?? 5,
+                totalActiveSeats: activeEmployees + 1,
+                availableSeats: Math.max(0, (company?.subscription?.purchasedSeats ?? 5) - (activeEmployees + 1)),
             },
             upcomingMeetings,
             upcomingBirthdays: topBirthdays,

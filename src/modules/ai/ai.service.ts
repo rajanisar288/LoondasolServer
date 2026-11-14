@@ -351,7 +351,7 @@ User Request: "${promptText}"`;
     };
   }
 
-  // Verify caller's permission and company subscription tier for AI tools
+  // checkAiAccess: verifies user permissions, checks monthly AI quota, and increments request count
   async checkAiAccess(tenant: TenantContext, user: JwtPayload): Promise<void> {
     const isOwner = user.isOwner || user.role === 'OWNER';
     const hasAiPerm = user.permissions?.includes(PERMISSIONS.AI_TOOLS_USE);
@@ -360,6 +360,55 @@ User Request: "${promptText}"`;
         'You do not have permission to utilize AI Assistant tools. Please contact your company administrator.',
       );
     }
+
+    const companyModel = await this.regionalDbManager.getModel<Company>(
+      tenant.region,
+      Company.name,
+      CompanySchema,
+    );
+    const company = await companyModel.findOne({ companyId: tenant.companyId });
+    if (!company) {
+      return;
+    }
+
+    const now = new Date();
+    const resetDate = company.subscription?.aiCycleResetDate
+      ? new Date(company.subscription.aiCycleResetDate)
+      : new Date(0);
+    const isNewCycle =
+      now.getMonth() !== resetDate.getMonth() ||
+      now.getFullYear() !== resetDate.getFullYear();
+
+    if (isNewCycle) {
+      if (!company.subscription) {
+        (company as any).subscription = {};
+      }
+      company.subscription.aiRequestsUsedThisMonth = 0;
+      company.subscription.aiCycleResetDate = now;
+      await company.save();
+    }
+
+    const plan = company.subscription?.plan || SubscriptionPlan.PRO;
+    let limit = 5000;
+    if (plan === SubscriptionPlan.STARTER) {
+      limit = 1000;
+    } else if (plan === SubscriptionPlan.ENTERPRISE) {
+      limit = -1;
+    } else if (company.subscription?.aiRequestLimit !== undefined) {
+      limit = company.subscription.aiRequestLimit;
+    }
+
+    const used = company.subscription?.aiRequestsUsedThisMonth || 0;
+    if (limit !== -1 && used >= limit) {
+      throw new ForbiddenException(
+        `AI monthly limit of ${limit} requests reached for your ${plan} plan. Please wait for the new cycle or upgrade your plan in Settings.`,
+      );
+    }
+
+    await companyModel.updateOne(
+      { companyId: tenant.companyId },
+      { $inc: { 'subscription.aiRequestsUsedThisMonth': 1 } },
+    );
   }
 
   // Parse natural language prompt into structured task

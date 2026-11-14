@@ -21,6 +21,8 @@ export declare class RegisterDto {
     postalCode?: string;
     address?: string;
     region?: string;
+    subscriptionPlan?: string;
+    purchasedSeats?: number;
     timezone?: string;
     currency?: string;
     invitationToken?: string;

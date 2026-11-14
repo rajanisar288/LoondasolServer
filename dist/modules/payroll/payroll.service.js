@@ -777,7 +777,7 @@ let PayrollService = PayrollService_1 = class PayrollService {
         const company = await compModel.findOne({ companyId: tenant.companyId }).lean();
         const cfg = {
             ...(company?.payrollConfig || {}),
-            ...(dto.templateConfig || {}),
+            ...(dto.payrollConfigOverride || dto.templateConfig || {}),
         };
         const currency = company?.currency || 'USD';
         const sampleBase = 5000;

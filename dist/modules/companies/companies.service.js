@@ -91,6 +91,68 @@ let CompaniesService = class CompaniesService {
             success: true,
         };
     }
+    async getSeatStatus(tenant) {
+        const companyModel = await this.regionalDbManager.getModel(tenant.region, company_schema_1.Company.name, company_schema_1.CompanySchema);
+        const company = await companyModel.findOne({ companyId: tenant.companyId }).lean();
+        if (!company) {
+            throw new common_1.NotFoundException('Company profile not found');
+        }
+        const employeeModel = await this.regionalDbManager.getModel(tenant.region, employee_schema_1.Employee.name, employee_schema_1.EmployeeSchema);
+        const activeEmployees = await employeeModel.countDocuments({
+            companyId: tenant.companyId,
+            status: { $nin: ['TERMINATED', 'DEACTIVATED', 'INACTIVE'] },
+        });
+        const totalActiveSeats = activeEmployees + 1;
+        const purchasedSeats = company.subscription?.purchasedSeats ?? 5;
+        const plan = company.subscription?.plan || 'PRO';
+        const pricePerSeat = company.subscription?.pricePerSeat ?? 5;
+        const aiLimit = company.subscription?.aiRequestLimit ?? 5000;
+        const aiUsed = company.subscription?.aiRequestsUsedThisMonth ?? 0;
+        const availableSeats = Math.max(0, purchasedSeats - totalActiveSeats);
+        return {
+            purchasedSeats,
+            totalActiveSeats,
+            availableSeats,
+            plan,
+            pricePerSeat,
+            aiLimit,
+            aiUsed,
+        };
+    }
+    async addSeats(tenant, additionalSeats) {
+        if (!additionalSeats || additionalSeats < 1) {
+            throw new common_1.BadRequestException('Additional seats count must be at least 1');
+        }
+        const companyModel = await this.regionalDbManager.getModel(tenant.region, company_schema_1.Company.name, company_schema_1.CompanySchema);
+        const company = await companyModel.findOne({ companyId: tenant.companyId });
+        if (!company) {
+            throw new common_1.NotFoundException('Company profile not found');
+        }
+        const pricePerSeat = company.subscription?.pricePerSeat ?? 5;
+        const chargedAmount = additionalSeats * pricePerSeat;
+        const currentSeats = company.subscription?.purchasedSeats ?? 5;
+        const newTotalSeats = currentSeats + additionalSeats;
+        if (!company.subscription) {
+            company.subscription = {
+                plan: company_schema_1.SubscriptionPlan.PRO,
+                status: company_schema_1.SubscriptionStatus.ACTIVE,
+                purchasedSeats: newTotalSeats,
+                pricePerSeat,
+                aiRequestLimit: 5000,
+                aiRequestsUsedThisMonth: 0,
+            };
+        }
+        else {
+            company.subscription.purchasedSeats = newTotalSeats;
+        }
+        await company.save();
+        return {
+            success: true,
+            additionalSeats,
+            totalSeats: newTotalSeats,
+            chargedAmount,
+        };
+    }
 };
 exports.CompaniesService = CompaniesService;
 exports.CompaniesService = CompaniesService = __decorate([

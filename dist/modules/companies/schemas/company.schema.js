@@ -14,7 +14,9 @@ const mongoose_1 = require("@nestjs/mongoose");
 var SubscriptionPlan;
 (function (SubscriptionPlan) {
     SubscriptionPlan["FREE_TRIAL"] = "FREE_TRIAL";
+    SubscriptionPlan["STARTER"] = "STARTER";
     SubscriptionPlan["PRO"] = "PRO";
+    SubscriptionPlan["ENTERPRISE"] = "ENTERPRISE";
     SubscriptionPlan["ULTRA"] = "ULTRA";
 })(SubscriptionPlan || (exports.SubscriptionPlan = SubscriptionPlan = {}));
 var SubscriptionStatus;
@@ -62,7 +64,7 @@ __decorate([
     (0, mongoose_1.Prop)({
         required: true,
         enum: Object.values(SubscriptionPlan),
-        default: SubscriptionPlan.FREE_TRIAL,
+        default: SubscriptionPlan.PRO,
     }),
     __metadata("design:type", String)
 ], SubscriptionConfig.prototype, "plan", void 0);
@@ -70,10 +72,30 @@ __decorate([
     (0, mongoose_1.Prop)({
         required: true,
         enum: Object.values(SubscriptionStatus),
-        default: SubscriptionStatus.TRIALING,
+        default: SubscriptionStatus.ACTIVE,
     }),
     __metadata("design:type", String)
 ], SubscriptionConfig.prototype, "status", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true, default: 5 }),
+    __metadata("design:type", Number)
+], SubscriptionConfig.prototype, "purchasedSeats", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true, default: 5 }),
+    __metadata("design:type", Number)
+], SubscriptionConfig.prototype, "pricePerSeat", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false, default: 5000 }),
+    __metadata("design:type", Number)
+], SubscriptionConfig.prototype, "aiRequestLimit", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false, default: 0 }),
+    __metadata("design:type", Number)
+], SubscriptionConfig.prototype, "aiRequestsUsedThisMonth", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false, default: () => new Date() }),
+    __metadata("design:type", Date)
+], SubscriptionConfig.prototype, "aiCycleResetDate", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", Date)
@@ -109,11 +131,11 @@ __decorate([
     __metadata("design:type", Boolean)
 ], OnboardingConfig.prototype, "requireBankDetails", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, default: true }),
+    (0, mongoose_1.Prop)({ required: true, default: false }),
     __metadata("design:type", Boolean)
 ], OnboardingConfig.prototype, "allowBranchCustomForms", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, default: true }),
+    (0, mongoose_1.Prop)({ required: true, default: false }),
     __metadata("design:type", Boolean)
 ], OnboardingConfig.prototype, "allowBranchDepartments", void 0);
 exports.OnboardingConfig = OnboardingConfig = __decorate([

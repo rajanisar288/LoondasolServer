@@ -20,6 +20,7 @@ import { UploadModule } from './modules/upload/upload.module';
 import { AiModule } from './modules/ai/ai.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { KafkaModule } from './modules/kafka/kafka.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { MeetingsModule } from './modules/meetings/meetings.module';
 import { BranchesModule } from './modules/branches/branches.module';
@@ -66,6 +67,7 @@ import { CountryMiddleware } from './common/middleware/country.middleware';
     AiModule,
     BroadcastsModule,
     SubscriptionsModule,
+    KafkaModule,
     NotificationsModule,
     MeetingsModule,
     BranchesModule,

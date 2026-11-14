@@ -31,6 +31,12 @@ let CompaniesController = class CompaniesController {
     async getCurrent(tenant) {
         return this.companiesService.getCompany(tenant);
     }
+    async getSeatsStatus(tenant) {
+        return this.companiesService.getSeatStatus(tenant);
+    }
+    async expandSeats(tenant, additionalSeats) {
+        return this.companiesService.addSeats(tenant, Number(additionalSeats));
+    }
     async updateCurrent(tenant, dto) {
         return this.companiesService.updateCompany(tenant, dto);
     }
@@ -50,6 +56,28 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CompaniesController.prototype, "getCurrent", null);
+__decorate([
+    (0, common_1.Get)('seats/status'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get active seat quota, occupied seats, and AI request statistics',
+    }),
+    __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CompaniesController.prototype, "getSeatsStatus", null);
+__decorate([
+    (0, common_1.Patch)('seats/expand'),
+    (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.COMPANY_SETTINGS_UPDATE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Expand company employee seats quota and charge incremental seats',
+    }),
+    __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
+    __param(1, (0, common_1.Body)('additionalSeats')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:returntype", Promise)
+], CompaniesController.prototype, "expandSeats", null);
 __decorate([
     (0, common_1.Patch)('current'),
     (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.COMPANY_SETTINGS_UPDATE),

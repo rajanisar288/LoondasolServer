@@ -38,8 +38,8 @@ let TasksController = class TasksController {
     async create(tenant, user, dto) {
         return this.tasksService.create(tenant, user, dto);
     }
-    async update(tenant, id, dto) {
-        return this.tasksService.update(tenant, id, dto);
+    async update(tenant, user, id, dto) {
+        return this.tasksService.update(tenant, id, dto, user);
     }
     async addSubtask(tenant, id, dto) {
         return this.tasksService.addSubtask(tenant, id, dto);
@@ -119,10 +119,11 @@ __decorate([
     (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.TASKS_UPDATE),
     (0, swagger_1.ApiOperation)({ summary: 'Update a task' }),
     __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, common_1.Param)('id')),
+    __param(3, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, task_dto_1.UpdateTaskDto]),
+    __metadata("design:paramtypes", [Object, Object, String, task_dto_1.UpdateTaskDto]),
     __metadata("design:returntype", Promise)
 ], TasksController.prototype, "update", null);
 __decorate([

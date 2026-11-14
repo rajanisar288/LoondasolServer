@@ -9,7 +9,7 @@ export declare class TasksController {
     findAll(tenant: TenantContext, user: JwtPayload, status?: TaskStatus, assigneeId?: string): Promise<Task[]>;
     findOne(tenant: TenantContext, id: string): Promise<Task>;
     create(tenant: TenantContext, user: JwtPayload, dto: CreateTaskDto): Promise<Task>;
-    update(tenant: TenantContext, id: string, dto: UpdateTaskDto): Promise<Task>;
+    update(tenant: TenantContext, user: JwtPayload, id: string, dto: UpdateTaskDto): Promise<Task>;
     addSubtask(tenant: TenantContext, id: string, dto: CreateSubtaskDto): Promise<Task>;
     updateSubtask(tenant: TenantContext, id: string, subtaskId: string, dto: UpdateSubtaskDto): Promise<Task>;
     deleteSubtask(tenant: TenantContext, id: string, subtaskId: string): Promise<Task>;
