@@ -273,14 +273,18 @@ let AuthService = AuthService_1 = class AuthService {
                 status: employee_schema_1.EmployeeStatus.ACTIVE,
                 joiningDate: new Date(),
             });
-            this.mailService
-                .sendVerificationCodeEmail(normalizedEmail, {
-                name: displayName,
-                companyName: company.name,
-                code: verificationCode,
-                expiresInMinutes: 15,
-            })
-                .catch((err) => this.logger.error(`Failed to send verification email: ${err.message}`));
+            try {
+                await this.mailService.sendVerificationCodeEmail(normalizedEmail, {
+                    name: displayName,
+                    companyName: company.name,
+                    code: verificationCode,
+                    expiresInMinutes: 15,
+                });
+                this.logger.log(`Verification code email successfully sent to ${normalizedEmail}`);
+            }
+            catch (err) {
+                this.logger.error(`Failed to send verification email to ${normalizedEmail}: ${err instanceof Error ? err.message : String(err)}`);
+            }
             this.logger.log(`Registered company [${company.name}] (ID: ${companyId}) in region [${region}]`);
             return {
                 accessToken: tokens.accessToken,

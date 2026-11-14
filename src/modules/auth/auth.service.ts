@@ -422,17 +422,20 @@ export class AuthService {
       joiningDate: new Date(),
     });
 
-    // 9. Dispatch Verification Email in Background
-    this.mailService
-      .sendVerificationCodeEmail(normalizedEmail, {
+    // 9. Dispatch Verification Email (Awaited to ensure serverless execution delivers the email)
+    try {
+      await this.mailService.sendVerificationCodeEmail(normalizedEmail, {
         name: displayName,
         companyName: company.name,
         code: verificationCode,
         expiresInMinutes: 15,
-      })
-      .catch((err) =>
-        this.logger.error(`Failed to send verification email: ${err.message}`),
+      });
+      this.logger.log(`Verification code email successfully sent to ${normalizedEmail}`);
+    } catch (err: unknown) {
+      this.logger.error(
+        `Failed to send verification email to ${normalizedEmail}: ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
 
     this.logger.log(
       `Registered company [${company.name}] (ID: ${companyId}) in region [${region}]`,
