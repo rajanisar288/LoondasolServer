@@ -39,6 +39,18 @@ let ChatController = class ChatController {
     async getMessages(tenant, channelId, limit) {
         return this.chatService.getMessages(tenant, channelId || 'general', limit);
     }
+    async sendMessage(tenant, user, dto) {
+        return this.chatService.sendMessage(tenant, user, dto);
+    }
+    async editMessage(tenant, user, messageId, content) {
+        return this.chatService.editMessage(tenant, user, messageId, content);
+    }
+    async deleteMessage(tenant, user, messageId) {
+        return this.chatService.deleteMessage(tenant, user, messageId);
+    }
+    async reactMessage(tenant, user, messageId, emoji) {
+        return this.chatService.reactMessage(tenant, user, messageId, emoji);
+    }
     async getDirectMessages(tenant, user, recipientId, limit) {
         return this.chatService.getDirectMessages(tenant, user.userId, recipientId, limit);
     }
@@ -108,6 +120,52 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Number]),
     __metadata("design:returntype", Promise)
 ], ChatController.prototype, "getMessages", null);
+__decorate([
+    (0, common_1.Post)('messages'),
+    (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.MESSAGES_CREATE),
+    (0, swagger_1.ApiOperation)({ summary: 'Send a message (direct or channel) via HTTP REST' }),
+    __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "sendMessage", null);
+__decorate([
+    (0, common_1.Patch)('messages/:id'),
+    (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.MESSAGES_CREATE),
+    (0, swagger_1.ApiOperation)({ summary: 'Edit message content via HTTP REST' }),
+    __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, common_1.Param)('id')),
+    __param(3, (0, common_1.Body)('content')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "editMessage", null);
+__decorate([
+    (0, common_1.Delete)('messages/:id'),
+    (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.MESSAGES_CREATE),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a message via HTTP REST' }),
+    __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, String]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "deleteMessage", null);
+__decorate([
+    (0, common_1.Post)('messages/:id/react'),
+    (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.MESSAGES_CREATE),
+    (0, swagger_1.ApiOperation)({ summary: 'React to a message via HTTP REST' }),
+    __param(0, (0, current_tenant_decorator_1.CurrentTenant)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, common_1.Param)('id')),
+    __param(3, (0, common_1.Body)('emoji')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, String, String]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "reactMessage", null);
 __decorate([
     (0, common_1.Get)('direct/:recipientId'),
     (0, require_permissions_decorator_1.RequirePermissions)(permissions_constant_1.PERMISSIONS.MESSAGES_VIEW),

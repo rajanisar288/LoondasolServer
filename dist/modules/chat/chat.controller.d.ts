@@ -1,4 +1,4 @@
-import { ChatService, CreateChannelDto } from './chat.service';
+import { ChatService, CreateChannelDto, SendMessageDto } from './chat.service';
 import { TenantContext } from '../../common/decorators/current-tenant.decorator';
 import { Message } from './schemas/message.schema';
 import { JwtPayload } from '../auth/jwt.strategy';
@@ -9,6 +9,13 @@ export declare class ChatController {
     createChannel(tenant: TenantContext, user: JwtPayload, dto: CreateChannelDto): Promise<import("./schemas/channel.schema").Channel>;
     addMembers(tenant: TenantContext, channelId: string, memberIds: string[]): Promise<import("./schemas/channel.schema").Channel>;
     getMessages(tenant: TenantContext, channelId?: string, limit?: number): Promise<Message[]>;
+    sendMessage(tenant: TenantContext, user: JwtPayload, dto: SendMessageDto): Promise<Message>;
+    editMessage(tenant: TenantContext, user: JwtPayload, messageId: string, content: string): Promise<Message>;
+    deleteMessage(tenant: TenantContext, user: JwtPayload, messageId: string): Promise<{
+        success: boolean;
+        messageId: string;
+    }>;
+    reactMessage(tenant: TenantContext, user: JwtPayload, messageId: string, emoji: string): Promise<Message>;
     getDirectMessages(tenant: TenantContext, user: JwtPayload, recipientId: string, limit?: number): Promise<Message[]>;
     getConversations(tenant: TenantContext, user: JwtPayload): Promise<import("./chat.service").ConversationSummary[]>;
     togglePinChannel(tenant: TenantContext, user: JwtPayload, channelId: string): Promise<{

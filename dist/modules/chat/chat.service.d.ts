@@ -10,6 +10,27 @@ export interface CreateChannelDto {
     isPrivate?: boolean;
     memberIds?: string[];
 }
+export interface SendMessageDto {
+    content?: string;
+    channelId?: string;
+    recipientId?: string;
+    type?: string;
+    audioDurationSeconds?: number;
+    replyTo?: {
+        messageId: string;
+        senderId: string;
+        senderName: string;
+        content?: string;
+        attachmentName?: string;
+    };
+    mentions?: string[];
+    attachments?: {
+        url: string;
+        fileName: string;
+        fileType: string;
+        fileSize?: number;
+    }[];
+}
 export interface ConversationSummary {
     channelId: string;
     peerId: string;
@@ -26,6 +47,7 @@ export declare class ChatService {
     getChannels(tenant: TenantContext, user: JwtPayload): Promise<Channel[]>;
     createChannel(tenant: TenantContext, user: JwtPayload, dto: CreateChannelDto): Promise<Channel>;
     addMembers(tenant: TenantContext, channelId: string, memberIds: string[]): Promise<Channel>;
+    sendMessage(tenant: TenantContext, user: JwtPayload, dto: SendMessageDto): Promise<Message>;
     getMessages(tenant: TenantContext, channelId?: string, limit?: number): Promise<Message[]>;
     getDirectMessages(tenant: TenantContext, userId: string, peerId: string, limit?: number): Promise<Message[]>;
     getDirectConversationsSummary(tenant: TenantContext, user: JwtPayload): Promise<ConversationSummary[]>;
@@ -45,4 +67,10 @@ export declare class ChatService {
     markDirectRead(tenant: TenantContext, user: JwtPayload, peerId: string): Promise<{
         success: boolean;
     }>;
+    editMessage(tenant: TenantContext, user: JwtPayload, messageId: string, content: string): Promise<Message>;
+    deleteMessage(tenant: TenantContext, user: JwtPayload, messageId: string): Promise<{
+        success: boolean;
+        messageId: string;
+    }>;
+    reactMessage(tenant: TenantContext, user: JwtPayload, messageId: string, emoji: string): Promise<Message>;
 }

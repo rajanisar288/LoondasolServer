@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { RegionalDatabaseManager } from '../../database/regional-database.manager';
@@ -16,6 +17,28 @@ export interface CreateChannelDto {
   description?: string;
   isPrivate?: boolean;
   memberIds?: string[];
+}
+
+export interface SendMessageDto {
+  content?: string;
+  channelId?: string;
+  recipientId?: string;
+  type?: string;
+  audioDurationSeconds?: number;
+  replyTo?: {
+    messageId: string;
+    senderId: string;
+    senderName: string;
+    content?: string;
+    attachmentName?: string;
+  };
+  mentions?: string[];
+  attachments?: {
+    url: string;
+    fileName: string;
+    fileType: string;
+    fileSize?: number;
+  }[];
 }
 
 export interface ConversationSummary {
@@ -168,6 +191,92 @@ export class ChatService {
     }
 
     return updated;
+  }
+
+  // Send a message via HTTP REST fallback for environments where WebSocket connections are unavailable
+  async sendMessage(
+    tenant: TenantContext,
+    user: JwtPayload,
+    dto: SendMessageDto,
+  ): Promise<Message> {
+    const hasText = !!dto.content && !!dto.content.trim();
+    const hasAttachments = !!dto.attachments && dto.attachments.length > 0;
+    const isVoice = dto.type === 'VOICE';
+
+    if (!hasText && !hasAttachments && !isVoice) {
+      throw new BadRequestException('Message content or attachment is required');
+    }
+
+    const messageId = `msg_${randomUUID()}`;
+    const model = await this.regionalDbManager.getModel<Message>(
+      tenant.region,
+      Message.name,
+      MessageSchema,
+    );
+
+    const contentText = hasText ? dto.content!.trim() : (isVoice ? '🎤 Voice message' : '');
+    const attachments = dto.attachments || [];
+    const msgType = dto.type || (hasAttachments ? 'FILE' : 'TEXT');
+
+    let createdMessage: Message;
+
+    if (dto.recipientId) {
+      const dmChannelId = `dm_${[user.userId, dto.recipientId].sort().join('_')}`;
+
+      createdMessage = await model.create({
+        messageId,
+        companyId: tenant.companyId,
+        channelId: dmChannelId,
+        senderId: user.userId,
+        senderName: user.email.split('@')[0],
+        content: contentText,
+        type: msgType,
+        audioDurationSeconds: dto.audioDurationSeconds || 0,
+        recipientId: dto.recipientId,
+        isDirect: true,
+        attachments,
+        replyTo: dto.replyTo || undefined,
+        mentions: dto.mentions || [],
+        readBy: [user.userId],
+      });
+
+      // Broadcast if gateway server is active
+      try {
+        if (this.chatGateway && this.chatGateway.server) {
+          this.chatGateway.server.to(`user:${dto.recipientId}`).emit('newMessage', createdMessage);
+          if (dto.recipientId !== user.userId) {
+            this.chatGateway.server.to(`user:${user.userId}`).emit('newMessage', createdMessage);
+          }
+        }
+      } catch {}
+    } else {
+      const channelId = dto.channelId || 'general';
+
+      createdMessage = await model.create({
+        messageId,
+        companyId: tenant.companyId,
+        channelId,
+        senderId: user.userId,
+        senderName: user.email.split('@')[0],
+        content: contentText,
+        type: msgType,
+        audioDurationSeconds: dto.audioDurationSeconds || 0,
+        isDirect: false,
+        attachments,
+        replyTo: dto.replyTo || undefined,
+        mentions: dto.mentions || [],
+        readBy: [user.userId],
+      });
+
+      // Broadcast if gateway server is active
+      try {
+        if (this.chatGateway && this.chatGateway.server) {
+          this.chatGateway.server.to(`channel:${tenant.companyId}:${channelId}`).emit('newMessage', createdMessage);
+        }
+      } catch {}
+    }
+
+    return createdMessage;
   }
 
   // Fetch recent messages for channel
@@ -445,6 +554,179 @@ export class ChatService {
     );
 
     return { success: true };
+  }
+
+  // Edit a message via HTTP REST
+  async editMessage(
+    tenant: TenantContext,
+    user: JwtPayload,
+    messageId: string,
+    content: string,
+  ): Promise<Message> {
+    const model = await this.regionalDbManager.getModel<Message>(
+      tenant.region,
+      Message.name,
+      MessageSchema,
+    );
+
+    const filter: Record<string, unknown> = {
+      messageId,
+      companyId: tenant.companyId,
+    };
+    if (!user.isOwner) {
+      filter.senderId = user.userId;
+    }
+
+    const updated = await model.findOneAndUpdate(
+      filter,
+      {
+        content: (content || '').trim(),
+        isEdited: true,
+        updatedAt: new Date(),
+      },
+      { new: true },
+    );
+
+    if (!updated) {
+      throw new NotFoundException('Message not found or not editable by current user');
+    }
+
+    try {
+      if (this.chatGateway?.server) {
+        if (updated.isDirect && updated.recipientId) {
+          this.chatGateway.server.to(`user:${updated.recipientId}`).emit('messageEdited', updated);
+          if (updated.recipientId !== updated.senderId) {
+            this.chatGateway.server.to(`user:${updated.senderId}`).emit('messageEdited', updated);
+          }
+        } else {
+          this.chatGateway.server.to(`company:${tenant.companyId}`).emit('messageEdited', updated);
+        }
+      }
+    } catch {}
+
+    return updated;
+  }
+
+  // Delete a message via HTTP REST
+  async deleteMessage(
+    tenant: TenantContext,
+    user: JwtPayload,
+    messageId: string,
+  ): Promise<{ success: boolean; messageId: string }> {
+    const model = await this.regionalDbManager.getModel<Message>(
+      tenant.region,
+      Message.name,
+      MessageSchema,
+    );
+
+    const filter: Record<string, unknown> = {
+      messageId,
+      companyId: tenant.companyId,
+    };
+    if (!user.isOwner) {
+      filter.senderId = user.userId;
+    }
+
+    const updated = await model.findOneAndUpdate(
+      filter,
+      {
+        isDeleted: true,
+        content: 'This message was deleted',
+        attachments: [],
+        updatedAt: new Date(),
+      },
+      { new: true },
+    );
+
+    if (!updated) {
+      throw new NotFoundException('Message not found or not deletable by current user');
+    }
+
+    try {
+      if (this.chatGateway?.server) {
+        const payload = {
+          messageId: updated.messageId,
+          channelId: updated.channelId,
+          recipientId: updated.recipientId,
+        };
+        if (updated.isDirect && updated.recipientId) {
+          this.chatGateway.server.to(`user:${updated.recipientId}`).emit('messageDeleted', payload);
+          if (updated.recipientId !== updated.senderId) {
+            this.chatGateway.server.to(`user:${updated.senderId}`).emit('messageDeleted', payload);
+          }
+        } else {
+          this.chatGateway.server.to(`company:${tenant.companyId}`).emit('messageDeleted', payload);
+        }
+      }
+    } catch {}
+
+    return { success: true, messageId };
+  }
+
+  // React to a message via HTTP REST
+  async reactMessage(
+    tenant: TenantContext,
+    user: JwtPayload,
+    messageId: string,
+    emoji: string,
+  ): Promise<Message> {
+    const model = await this.regionalDbManager.getModel<Message>(
+      tenant.region,
+      Message.name,
+      MessageSchema,
+    );
+
+    const msg = await model.findOne({
+      companyId: tenant.companyId,
+      messageId,
+    });
+    if (!msg) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const currentReactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+    const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
+
+    if (existingIdx > -1) {
+      const userIds = currentReactions[existingIdx].userIds || [];
+      if (userIds.includes(user.userId)) {
+        const updatedIds = userIds.filter((id) => id !== user.userId);
+        if (updatedIds.length === 0) {
+          currentReactions.splice(existingIdx, 1);
+        } else {
+          currentReactions[existingIdx].userIds = updatedIds;
+        }
+      } else {
+        currentReactions[existingIdx].userIds.push(user.userId);
+      }
+    } else {
+      currentReactions.push({ emoji, userIds: [user.userId] });
+    }
+
+    const updated = await model.findOneAndUpdate(
+      { companyId: tenant.companyId, messageId },
+      { reactions: currentReactions },
+      { new: true },
+    );
+
+    if (!updated) {
+      throw new NotFoundException('Failed to update reactions');
+    }
+
+    try {
+      if (this.chatGateway?.server) {
+        if (updated.isDirect && updated.recipientId) {
+          this.chatGateway.server.to(`user:${updated.recipientId}`).emit('messageReacted', updated);
+          if (updated.recipientId !== updated.senderId) {
+            this.chatGateway.server.to(`user:${updated.senderId}`).emit('messageReacted', updated);
+          }
+        } else {
+          this.chatGateway.server.to(`company:${tenant.companyId}`).emit('messageReacted', updated);
+        }
+      }
+    } catch {}
+
+    return updated;
   }
 }
 

@@ -2,13 +2,15 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ChatService, CreateChannelDto } from './chat.service';
+import { ChatService, CreateChannelDto, SendMessageDto } from './chat.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -70,6 +72,52 @@ export class ChatController {
     @Query('limit') limit?: number,
   ): Promise<Message[]> {
     return this.chatService.getMessages(tenant, channelId || 'general', limit);
+  }
+
+  @Post('messages')
+  @RequirePermissions(PERMISSIONS.MESSAGES_CREATE)
+  @ApiOperation({ summary: 'Send a message (direct or channel) via HTTP REST' })
+  async sendMessage(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: SendMessageDto,
+  ): Promise<Message> {
+    return this.chatService.sendMessage(tenant, user, dto);
+  }
+
+  @Patch('messages/:id')
+  @RequirePermissions(PERMISSIONS.MESSAGES_CREATE)
+  @ApiOperation({ summary: 'Edit message content via HTTP REST' })
+  async editMessage(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: JwtPayload,
+    @Param('id') messageId: string,
+    @Body('content') content: string,
+  ): Promise<Message> {
+    return this.chatService.editMessage(tenant, user, messageId, content);
+  }
+
+  @Delete('messages/:id')
+  @RequirePermissions(PERMISSIONS.MESSAGES_CREATE)
+  @ApiOperation({ summary: 'Delete a message via HTTP REST' })
+  async deleteMessage(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: JwtPayload,
+    @Param('id') messageId: string,
+  ): Promise<{ success: boolean; messageId: string }> {
+    return this.chatService.deleteMessage(tenant, user, messageId);
+  }
+
+  @Post('messages/:id/react')
+  @RequirePermissions(PERMISSIONS.MESSAGES_CREATE)
+  @ApiOperation({ summary: 'React to a message via HTTP REST' })
+  async reactMessage(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: JwtPayload,
+    @Param('id') messageId: string,
+    @Body('emoji') emoji: string,
+  ): Promise<Message> {
+    return this.chatService.reactMessage(tenant, user, messageId, emoji);
   }
 
   @Get('direct/:recipientId')
