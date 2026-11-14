@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var EmployeesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmployeesService = void 0;
 const common_1 = require("@nestjs/common");
@@ -30,13 +31,14 @@ const user_schema_1 = require("../users/schemas/user.schema");
 const mongoose_1 = require("mongoose");
 const mongoose_2 = require("@nestjs/mongoose");
 const master_schema_1 = require("../../database/master.schema");
-let EmployeesService = class EmployeesService {
+let EmployeesService = EmployeesService_1 = class EmployeesService {
     constructor(regionalDbManager, passwordService, mailService, configService, masterIdentityModel) {
         this.regionalDbManager = regionalDbManager;
         this.passwordService = passwordService;
         this.mailService = mailService;
         this.configService = configService;
         this.masterIdentityModel = masterIdentityModel;
+        this.logger = new common_1.Logger(EmployeesService_1.name);
     }
     async findAll(tenant, user, query) {
         const model = await this.regionalDbManager.getModel(tenant.region, employee_schema_1.Employee.name, employee_schema_1.EmployeeSchema);
@@ -215,21 +217,25 @@ let EmployeesService = class EmployeesService {
             invitationTokenHash,
             invitationExpiresAt,
         });
-        const companyName = company?.name || 'WorkivLab';
-        const appUrl = this.configService.get('APP_URL') || 'http://localhost:4200';
-        const invitationLink = `${appUrl}/register?token=${rawInvitationToken}&email=${encodeURIComponent(employee.email)}&type=employee&region=${tenant.region}&companyId=${tenant.companyId}`;
-        this.mailService
-            .sendEmployeeInvitationEmail(employee.email, {
-            employeeName: `${employee.firstName} ${employee.lastName}`,
-            companyName,
-            designation: employee.designation,
-            departmentName,
-            inviteLink: invitationLink,
-            expiresInHours: 48,
-        })
-            .catch((err) => {
-            console.error('Failed to send employee invitation email:', err?.message);
-        });
+        const companyName = company?.name || 'Loondasol';
+        const isProd = this.configService.get('NODE_ENV') === 'production';
+        const marketingUrl = this.configService.get('MARKETING_URL') ||
+            (isProd ? 'https://www.loondasol.com' : 'http://localhost:3000');
+        const invitationLink = `${marketingUrl}/accept-invitation?token=${rawInvitationToken}&email=${encodeURIComponent(employee.email)}&type=employee&region=${tenant.region}&companyId=${tenant.companyId}`;
+        try {
+            await this.mailService.sendEmployeeInvitationEmail(employee.email, {
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                companyName,
+                designation: employee.designation,
+                departmentName,
+                inviteLink: invitationLink,
+                expiresInHours: 48,
+            });
+            this.logger.log(`Employee invitation email sent to ${employee.email}`);
+        }
+        catch (err) {
+            this.logger.error(`Failed to send employee invitation email to ${employee.email}: ${err instanceof Error ? err.message : String(err)}`);
+        }
         return { employee, invitationLink };
     }
     async update(tenant, employeeId, dto) {
@@ -454,7 +460,7 @@ let EmployeesService = class EmployeesService {
     }
 };
 exports.EmployeesService = EmployeesService;
-exports.EmployeesService = EmployeesService = __decorate([
+exports.EmployeesService = EmployeesService = EmployeesService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(4, (0, mongoose_2.InjectModel)(master_schema_1.MasterIdentity.name)),
     __metadata("design:paramtypes", [regional_database_manager_1.RegionalDatabaseManager,

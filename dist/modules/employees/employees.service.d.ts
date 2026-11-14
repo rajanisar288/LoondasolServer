@@ -22,6 +22,7 @@ export declare class EmployeesService {
     private readonly mailService;
     private readonly configService;
     private readonly masterIdentityModel;
+    private readonly logger;
     constructor(regionalDbManager: RegionalDatabaseManager, passwordService: PasswordService, mailService: MailService, configService: ConfigService, masterIdentityModel: Model<MasterIdentityDocument>);
     findAll(tenant: TenantContext, user: JwtPayload, query: {
         page?: number;

@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { randomUUID, randomBytes } from 'crypto';
 import { RegionalDatabaseManager } from '../../database/regional-database.manager';
@@ -52,6 +53,8 @@ export interface PaginatedEmployees {
 
 @Injectable()
 export class EmployeesService {
+  private readonly logger = new Logger(EmployeesService.name);
+
   constructor(
     private readonly regionalDbManager: RegionalDatabaseManager,
     private readonly passwordService: PasswordService,
@@ -330,29 +333,30 @@ export class EmployeesService {
       invitationExpiresAt,
     });
 
-    const companyName = company?.name || 'WorkivLab';
+    const companyName = company?.name || 'Loondasol';
 
-    const appUrl =
-      this.configService.get<string>('APP_URL') || 'http://localhost:4200';
-    const invitationLink = `${appUrl}/register?token=${rawInvitationToken}&email=${encodeURIComponent(employee.email)}&type=employee&region=${tenant.region}&companyId=${tenant.companyId}`;
+    const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    const marketingUrl =
+      this.configService.get<string>('MARKETING_URL') ||
+      (isProd ? 'https://www.loondasol.com' : 'http://localhost:3000');
+    const invitationLink = `${marketingUrl}/accept-invitation?token=${rawInvitationToken}&email=${encodeURIComponent(employee.email)}&type=employee&region=${tenant.region}&companyId=${tenant.companyId}`;
 
-    // Dispatch professional invitation email in background
-    this.mailService
-      .sendEmployeeInvitationEmail(employee.email, {
+    // Dispatch professional invitation email (Awaited for serverless execution)
+    try {
+      await this.mailService.sendEmployeeInvitationEmail(employee.email, {
         employeeName: `${employee.firstName} ${employee.lastName}`,
         companyName,
         designation: employee.designation,
         departmentName,
         inviteLink: invitationLink,
         expiresInHours: 48,
-      })
-      .catch((err) => {
-        // Silently log error without failing transaction
-        console.error(
-          'Failed to send employee invitation email:',
-          err?.message,
-        );
       });
+      this.logger.log(`Employee invitation email sent to ${employee.email}`);
+    } catch (err: unknown) {
+      this.logger.error(
+        `Failed to send employee invitation email to ${employee.email}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     return { employee, invitationLink };
   }
