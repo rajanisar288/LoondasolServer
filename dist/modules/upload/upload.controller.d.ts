@@ -3,7 +3,10 @@ import { UploadService } from './upload.service';
 export declare class UploadController {
     private readonly uploadService;
     constructor(uploadService: UploadService);
-    uploadLogo(file: Express.Multer.File): Promise<{
+    uploadLogo(files: {
+        file?: Express.Multer.File[];
+        logo?: Express.Multer.File[];
+    }): Promise<{
         success: boolean;
         url: string;
         publicId: string;

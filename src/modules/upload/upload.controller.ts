@@ -3,11 +3,12 @@ import {
   Post,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   BadRequestException,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -26,15 +27,23 @@ export class UploadController {
   @Public()
   @Post('logo')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'file', maxCount: 1 },
+      { name: 'logo', maxCount: 1 },
+    ]),
+  )
   @ApiOperation({
     summary: 'Upload company logo or workspace asset to Cloudinary',
   })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'File uploaded successfully' })
   async uploadLogo(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: { file?: Express.Multer.File[]; logo?: Express.Multer.File[] },
   ): Promise<{ success: boolean; url: string; publicId: string }> {
+    const file =
+      (files?.file && files.file[0]) || (files?.logo && files.logo[0]);
     if (!file) {
       throw new BadRequestException('Image file is required');
     }

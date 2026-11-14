@@ -22,6 +22,9 @@ export declare class RegisterDto {
     address?: string;
     region?: string;
     subscriptionPlan?: string;
+    paymentMethod?: string;
+    paymentMethodId?: string;
+    stripePaymentMethodId?: string;
     purchasedSeats?: number;
     timezone?: string;
     currency?: string;

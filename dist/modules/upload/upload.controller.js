@@ -23,7 +23,8 @@ let UploadController = class UploadController {
     constructor(uploadService) {
         this.uploadService = uploadService;
     }
-    async uploadLogo(file) {
+    async uploadLogo(files) {
+        const file = (files?.file && files.file[0]) || (files?.logo && files.logo[0]);
         if (!file) {
             throw new common_1.BadRequestException('Image file is required');
         }
@@ -68,13 +69,16 @@ __decorate([
     (0, public_decorator_1.Public)(),
     (0, common_1.Post)('logo'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileFieldsInterceptor)([
+        { name: 'file', maxCount: 1 },
+        { name: 'logo', maxCount: 1 },
+    ])),
     (0, swagger_1.ApiOperation)({
         summary: 'Upload company logo or workspace asset to Cloudinary',
     }),
     (0, swagger_1.ApiConsumes)('multipart/form-data'),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'File uploaded successfully' }),
-    __param(0, (0, common_1.UploadedFile)()),
+    __param(0, (0, common_1.UploadedFiles)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)

@@ -103,6 +103,18 @@ export class RegisterDto {
   subscriptionPlan?: string;
 
   @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentMethodId?: string;
+
+  @IsOptional()
+  @IsString()
+  stripePaymentMethodId?: string;
+
+  @IsOptional()
   purchasedSeats?: number;
 
   @IsOptional()
